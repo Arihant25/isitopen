@@ -516,11 +516,11 @@ export default function AdminPage() {
                             </div>
                         )}
                     </div>
-                </div>                {/* Canteen PIN Management */}
+                </div>                {/* Shop PIN Management */}
                 <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
                     <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                         <Key className="text-yellow-400" />
-                        Canteen PIN Management
+                        Shop PIN Management
                     </h3>
                     <div className="space-y-3">
                         {canteens.map((canteen) => (
@@ -558,7 +558,7 @@ export default function AdminPage() {
                             </div>
                         ))}
                         {canteens.length === 0 && (
-                            <p className="text-slate-400 text-center py-4">Loading canteens...</p>
+                            <p className="text-slate-400 text-center py-4">Loading shops...</p>
                         )}
                     </div>
                 </div>
