@@ -3,20 +3,37 @@ import { MongoClient, Db } from 'mongodb';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const MONGODB_DB = process.env.MONGODB_DB || 'isitopen';
 
-let cachedClient: MongoClient | null = null;
-let cachedDb: Db | null = null;
+// Extend the global type to include our MongoDB cache
+declare global {
+    // eslint-disable-next-line no-var
+    var _mongoClientPromise: Promise<MongoClient> | undefined;
+}
+
+let clientPromise: Promise<MongoClient>;
+
+if (process.env.NODE_ENV === 'development') {
+    // In development mode, use a global variable so that the value
+    // is preserved across module reloads caused by HMR (Hot Module Replacement).
+    if (!global._mongoClientPromise) {
+        const client = new MongoClient(MONGODB_URI, {
+            maxPoolSize: 10,
+            minPoolSize: 1,
+        });
+        global._mongoClientPromise = client.connect();
+    }
+    clientPromise = global._mongoClientPromise;
+} else {
+    // In production mode, it's best to not use a global variable.
+    const client = new MongoClient(MONGODB_URI, {
+        maxPoolSize: 10,
+        minPoolSize: 1,
+    });
+    clientPromise = client.connect();
+}
 
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
-    if (cachedClient && cachedDb) {
-        return { client: cachedClient, db: cachedDb };
-    }
-
-    const client = await MongoClient.connect(MONGODB_URI);
+    const client = await clientPromise;
     const db = client.db(MONGODB_DB);
-
-    cachedClient = client;
-    cachedDb = db;
-
     return { client, db };
 }
 
