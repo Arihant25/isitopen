@@ -497,15 +497,7 @@ const VisitorCounter = () => {
 
 // Main App Component
 export default function Home() {
-  const [language, setLanguage] = useState<Language>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('language');
-      if (saved && (saved === 'en' || saved === 'hi' || saved === 'te')) {
-        return saved as Language;
-      }
-    }
-    return 'en';
-  });
+  const [language, setLanguage] = useState<Language>('en');
   const [view, setView] = useState<View>('landing');
   const [canteens, setCanteens] = useState<Canteen[]>([]);
   const [selectedCanteenId, setSelectedCanteenId] = useState<string | null>(null);
@@ -530,6 +522,14 @@ export default function Home() {
   const PULL_THRESHOLD = 120;
 
   const t = translations[language];
+
+  // Load language from localStorage on mount (client-side only)
+  useEffect(() => {
+    const saved = localStorage.getItem('language');
+    if (saved && (saved === 'en' || saved === 'hi' || saved === 'te')) {
+      setLanguage(saved as Language);
+    }
+  }, []);
 
   // Save language to localStorage when it changes
   useEffect(() => {
