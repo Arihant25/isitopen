@@ -368,7 +368,7 @@ export default function AdminPage() {
                             disabled={pinInput.length !== 4 || loading || !!(lockoutUntil && Date.now() < lockoutUntil)}
                             className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-500 transition-all active:scale-98"
                         >
-                            {loading ? 'Verifying...' : (lockoutUntil && Date.now() < lockoutUntil) ? 'Locked' : 'Enter Dashboard'}
+                            {loading ? 'Verifying...' : (lockoutUntil && Date.now() < lockoutUntil) ? 'Locked' : 'Enter'}
                         </button>
                     </div>
                 </div>

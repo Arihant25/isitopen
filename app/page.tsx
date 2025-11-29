@@ -469,7 +469,7 @@ export default function Home() {
           disabled={pinInput.length !== 4}
           className="w-full max-w-xs py-4 bg-blue-600 text-white rounded-xl font-bold text-lg disabled:opacity-50"
         >
-          Enter Dashboard
+          Enter
         </button>
       </div>
     );
