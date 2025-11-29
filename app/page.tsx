@@ -65,6 +65,7 @@ const translations = {
     visitor: 'Visitor',
     liveCanteenStatus: 'Live Shop Status',
     updated: 'Updated',
+    ago: 'ago',
     noUpdatesYet: 'No updates yet',
     open: 'OPEN',
     closed: 'CLOSED',
@@ -116,6 +117,7 @@ const translations = {
     visitor: 'आगंतुक',
     liveCanteenStatus: 'लाइव दुकान स्थिति',
     updated: 'अपडेट किया',
+    ago: 'पहले',
     noUpdatesYet: 'अभी तक कोई अपडेट नहीं',
     open: 'खुला',
     closed: 'बंद',
@@ -165,8 +167,9 @@ const translations = {
     iAmCanteen: 'నేను షాప్ ని',
     updateMyStatus: 'నా స్థితిని అప్డేట్ చేయండి',
     visitor: 'సందర్శకుడు',
-    liveCanteenStatus: 'లైవ్ షాప్ స్థితి',
-    updated: 'అప్డేట్ అయింది',
+    liveCanteenStatus: 'ప్రత్యక్ష దుకాణం స్థితి',
+    updated: 'నవీకరించబడింది',
+    ago: 'క్రితం',
     noUpdatesYet: 'ఇంకా అప్డేట్‌లు లేవు',
     open: 'తెరిచి ఉంది',
     closed: 'మూసి ఉంది',
@@ -710,18 +713,18 @@ export default function Home() {
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
     if (diffInSeconds < 60) {
-      return `${diffInSeconds}s ago`;
+      return `${diffInSeconds}s ${t.ago}`;
     }
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     if (diffInMinutes < 60) {
-      return `${diffInMinutes} min${diffInMinutes !== 1 ? 's' : ''} ago`;
+      return `${diffInMinutes} min${diffInMinutes !== 1 ? 's' : ''} ${t.ago}`;
     }
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) {
-      return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+      return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ${t.ago}`;
     }
     const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
+    return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ${t.ago}`;
   };
 
   const getNoteExpiryTime = (noteUpdatedAt?: string) => {
@@ -938,7 +941,11 @@ export default function Home() {
                           <h3 className="font-bold text-white text-lg">{canteen.name}</h3>
                           <div className="text-xs text-slate-400 flex items-center gap-1">
                             <Clock size={12} />
-                            {canteen.lastUpdated ? `${t.updated} ${formatTimeAgo(canteen.lastUpdated)}` : t.noUpdatesYet}
+                            {canteen.lastUpdated ? (
+                              language === 'te'
+                                ? `${formatTimeAgo(canteen.lastUpdated)} ${t.updated}`
+                                : `${t.updated} ${formatTimeAgo(canteen.lastUpdated)}`
+                            ) : t.noUpdatesYet}
                           </div>
                         </div>
                       </div>
