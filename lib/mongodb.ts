@@ -245,4 +245,6 @@ export const INITIAL_CANTEENS: Omit<Canteen, 'lastUpdated'>[] = [
     { id: 'waffle-stall', name: 'Waffle Stall', icon: 'waffle', status: 'closed', pin: '2091' },
     { id: 'dammams-milk-canteen', name: "Dammam's Milk Canteen", icon: 'drink', status: 'closed', pin: '4455' },
     { id: 'vindhya-stationery', name: 'Vindhya Stationery Shop', icon: 'store', status: 'closed', pin: '3847' },
+    { id: 'uncles', name: "Uncle's", icon: 'cannabis', status: 'closed', pin: '6789' },
+    { id: 'cie-canteen', name: 'CIE Canteen', icon: 'landmark', status: 'closed', pin: '5432' },
 ];

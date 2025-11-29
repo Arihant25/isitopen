@@ -26,7 +26,9 @@ import {
   ThumbsUp,
   ThumbsDown,
   HandCoins,
-  AlertTriangle
+  AlertTriangle,
+  Cannabis,
+  Landmark
 } from 'lucide-react';
 import { Analytics } from '@/lib/analytics';
 
@@ -447,6 +449,8 @@ const CanteenIcon = ({ type, size = 24, className }: { type: string; size?: numb
   if (type === 'cake') return <CakeSlice size={size} className={className} />;
   if (type === 'snack') return <Sandwich size={size} className={className} />;
   if (type === 'waffle') return <Cookie size={size} className={className} />;
+  if (type === 'cannabis') return <Cannabis size={size} className={className} />;
+  if (type === 'landmark') return <Landmark size={size} className={className} />;
   return <Store size={size} className={className} />;
 };
 
