@@ -25,7 +25,8 @@ import {
   HelpCircle,
   ThumbsUp,
   ThumbsDown,
-  HandCoins
+  HandCoins,
+  AlertTriangle
 } from 'lucide-react';
 import { Analytics } from '@/lib/analytics';
 
@@ -101,6 +102,7 @@ const translations = {
     peopleSaidClosed: 'said it\'s closed',
     thankYou: 'Thanks for your feedback!',
     communityFeedback: 'Community Feedback',
+    mightBeIncorrect: 'Might be incorrect',
   },
   hi: {
     appTitle: 'क्या खुला है?',
@@ -151,6 +153,7 @@ const translations = {
     peopleSaidClosed: 'ने कहा यह बंद है',
     thankYou: 'आपकी प्रतिक्रिया के लिए धन्यवाद!',
     communityFeedback: 'समुदाय प्रतिक्रिया',
+    mightBeIncorrect: 'गलत हो सकता है',
   },
   te: {
     appTitle: 'తెరిచి ఉందా?',
@@ -201,6 +204,7 @@ const translations = {
     peopleSaidClosed: 'మంది ఇది మూసి ఉందని చెప్పారు',
     thankYou: 'మీ అభిప్రాయానికి ధన్యవాదాలు!',
     communityFeedback: 'సమాజ అభిప్రాయం',
+    mightBeIncorrect: 'తప్పు కావచ్చు',
   },
 };
 
@@ -676,10 +680,25 @@ export default function Home() {
     }
   };
 
-  const formatTime = (timestamp?: string) => {
+  const formatTimeAgo = (timestamp?: string) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds}s ago`;
+    }
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} min${diffInMinutes !== 1 ? 's' : ''} ago`;
+    }
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) {
+      return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+    }
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
   };
 
   const getNoteExpiryTime = (noteUpdatedAt?: string) => {
@@ -865,12 +884,23 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {sortedCanteens.map((canteen) => {
                 const isOpen = canteen.status === 'open';
+                const canteenVotes = votes[canteen.id];
+                const correctVotes = canteenVotes?.correctVotes || 0;
+                const incorrectVotes = canteenVotes?.incorrectVotes || 0;
+                const totalVotes = correctVotes + incorrectVotes;
+                // Show warning if there are votes and more people disagree with the status
+                const showVoteWarning = totalVotes >= 2 && incorrectVotes > correctVotes;
+
                 return (
                   <div
                     key={canteen.id}
                     className={`flex flex-col p-4 rounded-xl border transition-all ${isOpen
-                      ? 'bg-slate-800 border-green-500/50 shadow-lg shadow-green-500/10'
-                      : 'bg-slate-800/50 border-slate-700 opacity-80'
+                      ? showVoteWarning
+                        ? 'bg-slate-800 border-yellow-500/50 shadow-lg shadow-yellow-500/10'
+                        : 'bg-slate-800 border-green-500/50 shadow-lg shadow-green-500/10'
+                      : showVoteWarning
+                        ? 'bg-slate-800/50 border-yellow-500/50 shadow-lg shadow-yellow-500/10'
+                        : 'bg-slate-800/50 border-slate-700 opacity-80'
                       }`}
                   >
                     <div className="flex items-center justify-between">
@@ -882,12 +912,17 @@ export default function Home() {
                           <h3 className="font-bold text-white text-lg">{canteen.name}</h3>
                           <div className="text-xs text-slate-400 flex items-center gap-1">
                             <Clock size={12} />
-                            {canteen.lastUpdated ? `${t.updated} ${formatTime(canteen.lastUpdated)}` : t.noUpdatesYet}
+                            {canteen.lastUpdated ? `${t.updated} ${formatTimeAgo(canteen.lastUpdated)}` : t.noUpdatesYet}
                           </div>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {showVoteWarning && (
+                          <div className="p-1.5 rounded-full bg-yellow-500/20 text-yellow-400" title={t.mightBeIncorrect}>
+                            <AlertTriangle size={16} />
+                          </div>
+                        )}
                         <div className={`px-3 py-1 rounded-full text-sm font-bold ${isOpen ? 'bg-green-600 text-white' : 'bg-red-500/20 text-red-400'
                           }`}>
                           {isOpen ? t.open : t.closed}
@@ -906,6 +941,33 @@ export default function Home() {
                     {canteen.note && (
                       <div className="mt-3 pt-3 border-t border-slate-700/50">
                         <p className="text-sm text-slate-300 leading-relaxed">{canteen.note}</p>
+                      </div>
+                    )}
+
+                    {/* Community votes bar */}
+                    {totalVotes > 0 && (
+                      <div
+                        className="mt-3 pt-3 border-t border-slate-700/50 cursor-pointer"
+                        onClick={() => setVotingCanteen(canteen)}
+                      >
+                        <div className="flex justify-between text-xs text-slate-400 mb-1.5">
+                          <span className={correctVotes > incorrectVotes ? 'text-green-400' : ''}>
+                            {correctVotes} {isOpen ? t.peopleSaidOpen : t.peopleSaidClosed}
+                          </span>
+                          <span className={incorrectVotes > correctVotes ? 'text-yellow-400' : ''}>
+                            {incorrectVotes} {isOpen ? t.peopleSaidClosed : t.peopleSaidOpen}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden flex">
+                          <div
+                            className="bg-green-500 transition-all duration-300"
+                            style={{ width: `${(correctVotes / totalVotes) * 100}%` }}
+                          />
+                          <div
+                            className="bg-red-500 transition-all duration-300"
+                            style={{ width: `${(incorrectVotes / totalVotes) * 100}%` }}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
