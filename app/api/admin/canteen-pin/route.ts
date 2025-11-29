@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase, verifyAdminPin, Canteen } from '@/lib/mongodb';
+import { connectToDatabase, verifyAdminPin, Canteen, checkRateLimit, recordLoginAttempt } from '@/lib/mongodb';
 
 // PATCH - Update canteen PIN (admin only)
 export async function PATCH(request: NextRequest) {
     try {
         const body = await request.json();
         const { adminPin, canteenId, newPin } = body;
+
+        // Get identifier (Device ID or IP)
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+        const deviceId = request.headers.get('x-device-id');
+        const identifier = deviceId || ip;
+
+        const rateLimitKey = `admin_canteen_pin_change:${identifier}`;
+
+        // Check rate limit
+        const { allowed, remainingTime } = await checkRateLimit(rateLimitKey);
+        if (!allowed) {
+            const minutes = Math.ceil((remainingTime || 0) / 60000);
+            return NextResponse.json(
+                { error: `Too many failed attempts. Try again in ${minutes} minutes.` },
+                { status: 429 }
+            );
+        }
 
         if (!adminPin || !canteenId || !newPin) {
             return NextResponse.json(
@@ -16,6 +33,10 @@ export async function PATCH(request: NextRequest) {
 
         // Verify admin PIN
         const isAdmin = await verifyAdminPin(adminPin);
+
+        // Record attempt
+        await recordLoginAttempt(rateLimitKey, isAdmin);
+
         if (!isAdmin) {
             return NextResponse.json({ error: 'Invalid admin PIN' }, { status: 401 });
         }
@@ -54,12 +75,33 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { adminPin } = body;
 
+        // Get identifier (Device ID or IP)
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+        const deviceId = request.headers.get('x-device-id');
+        const identifier = deviceId || ip;
+
+        const rateLimitKey = `admin_get_canteens:${identifier}`;
+
+        // Check rate limit
+        const { allowed, remainingTime } = await checkRateLimit(rateLimitKey);
+        if (!allowed) {
+            const minutes = Math.ceil((remainingTime || 0) / 60000);
+            return NextResponse.json(
+                { error: `Too many failed attempts. Try again in ${minutes} minutes.` },
+                { status: 429 }
+            );
+        }
+
         if (!adminPin) {
             return NextResponse.json({ error: 'Admin PIN is required' }, { status: 400 });
         }
 
         // Verify admin PIN
         const isAdmin = await verifyAdminPin(adminPin);
+
+        // Record attempt
+        await recordLoginAttempt(rateLimitKey, isAdmin);
+
         if (!isAdmin) {
             return NextResponse.json({ error: 'Invalid admin PIN' }, { status: 401 });
         }

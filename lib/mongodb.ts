@@ -147,7 +147,93 @@ export async function verifyAdminPin(pin: string): Promise<boolean> {
     return pin === adminPin;
 }
 
-// Initial canteen data for seeding
+// Rate limiting interface
+export interface RateLimitEntry {
+    key: string; // Changed from 'ip' to 'key' to support composite keys
+    attempts: number;
+    lastAttempt: Date;
+    lockoutUntil?: Date | null;
+}
+
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_DURATION = 3 * 60 * 60 * 1000; // 3 hours
+const ATTEMPT_RESET_DURATION = 60 * 60 * 1000; // 1 hour
+
+export async function checkRateLimit(key: string): Promise<{ allowed: boolean; remainingTime?: number }> {
+    const { db } = await connectToDatabase();
+    const collection = db.collection<RateLimitEntry>('rate_limits');
+
+    const entry = await collection.findOne({ key });
+
+    if (!entry) {
+        return { allowed: true };
+    }
+
+    const now = new Date();
+
+    // Check if locked out
+    if (entry.lockoutUntil) {
+        if (entry.lockoutUntil > now) {
+            const remainingTime = entry.lockoutUntil.getTime() - now.getTime();
+            return { allowed: false, remainingTime };
+        } else {
+            // Lockout expired, reset
+            await collection.updateOne({ key }, { $set: { attempts: 0, lockoutUntil: null } });
+            return { allowed: true };
+        }
+    }
+
+    // Check if attempts should be reset due to time passed
+    if (now.getTime() - new Date(entry.lastAttempt).getTime() > ATTEMPT_RESET_DURATION) {
+        await collection.updateOne({ key }, { $set: { attempts: 0 } });
+        return { allowed: true };
+    }
+
+    return { allowed: true };
+}
+
+export async function recordLoginAttempt(key: string, success: boolean): Promise<void> {
+    const { db } = await connectToDatabase();
+    const collection = db.collection<RateLimitEntry>('rate_limits');
+
+    if (success) {
+        // Reset attempts on success
+        await collection.deleteOne({ key });
+        return;
+    }
+
+    const entry = await collection.findOne({ key });
+    const now = new Date();
+
+    if (!entry) {
+        await collection.insertOne({
+            key,
+            attempts: 1,
+            lastAttempt: now
+        });
+    } else {
+        // If we are here, it means checkRateLimit was called and allowed it,
+        // so we just increment.
+
+        let newAttempts = entry.attempts + 1;
+
+        // Edge case: if last attempt was > reset duration, treat as 1st attempt
+        if (now.getTime() - new Date(entry.lastAttempt).getTime() > ATTEMPT_RESET_DURATION) {
+            newAttempts = 1;
+        }
+
+        const update: any = {
+            attempts: newAttempts,
+            lastAttempt: now
+        };
+
+        if (newAttempts >= MAX_ATTEMPTS) {
+            update.lockoutUntil = new Date(now.getTime() + LOCKOUT_DURATION);
+        }
+
+        await collection.updateOne({ key }, { $set: update });
+    }
+}// Initial canteen data for seeding
 export const INITIAL_CANTEENS: Omit<Canteen, 'lastUpdated'>[] = [
     { id: 'juice-canteen', name: 'Juice Canteen', icon: 'drink', status: 'closed', pin: '7297' },
     { id: 'vindhya-canteen', name: 'Vindhya Canteen', icon: 'coffee', status: 'closed', pin: '8139' },

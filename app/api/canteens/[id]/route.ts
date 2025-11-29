@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase, Canteen } from '@/lib/mongodb';
+import { connectToDatabase, Canteen, checkRateLimit, recordLoginAttempt } from '@/lib/mongodb';
 
 // GET single canteen
 export async function GET(
@@ -36,6 +36,23 @@ export async function PATCH(
         const body = await request.json();
         const { status, pin, note } = body;
 
+        // Get identifier (Device ID or IP)
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
+        const deviceId = request.headers.get('x-device-id');
+        const identifier = deviceId || ip;
+
+        const rateLimitKey = `canteen_login:${id}:${identifier}`;
+
+        // Check rate limit
+        const { allowed, remainingTime } = await checkRateLimit(rateLimitKey);
+        if (!allowed) {
+            const minutes = Math.ceil((remainingTime || 0) / 60000);
+            return NextResponse.json(
+                { error: `Too many failed attempts. Try again in ${minutes} minutes.` },
+                { status: 429 }
+            );
+        }
+
         const { db } = await connectToDatabase();
         const collection = db.collection<Canteen>('canteens');
 
@@ -46,7 +63,12 @@ export async function PATCH(
         }
 
         // Verify PIN against the canteen's own PIN from database
-        if (pin !== canteen.pin) {
+        const isValid = pin === canteen.pin;
+
+        // Record attempt
+        await recordLoginAttempt(rateLimitKey, isValid);
+
+        if (!isValid) {
             return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });
         }
 

@@ -48,6 +48,16 @@ export default function AdminPage() {
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
+    // Get or create device ID
+    const getDeviceId = useCallback(() => {
+        let deviceId = localStorage.getItem('deviceId');
+        if (!deviceId) {
+            deviceId = crypto.randomUUID();
+            localStorage.setItem('deviceId', deviceId);
+        }
+        return deviceId;
+    }, []);
+
     // PIN Management State
     const [canteens, setCanteens] = useState<CanteenPin[]>([]);
     const [showEditDialog, setShowEditDialog] = useState(false);
@@ -135,7 +145,10 @@ export default function AdminPage() {
         try {
             const response = await fetch('/api/admin/verify', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-device-id': getDeviceId()
+                },
                 body: JSON.stringify({ pin: pinInput }),
             });
 
@@ -149,6 +162,23 @@ export default function AdminPage() {
                 localStorage.removeItem('adminLockoutUntil');
                 localStorage.removeItem('adminLastFailedAttempt');
             } else {
+                // Try to parse error from server
+                let serverError = '';
+                try {
+                    const data = await response.json();
+                    serverError = data.error;
+                } catch (e) { }
+
+                if (response.status === 429) {
+                    setError(serverError || 'Too many failed attempts. Please try again later.');
+                    // Update local state to reflect lockout
+                    const lockoutTime = Date.now() + LOCKOUT_DURATION;
+                    setLockoutUntil(lockoutTime);
+                    localStorage.setItem('adminLockoutUntil', lockoutTime.toString());
+                    setPinInput('');
+                    return;
+                }
+
                 // Check if last failed attempt was more than ATTEMPT_RESET_DURATION ago, reset counter if so
                 const now = Date.now();
                 let currentAttempts = failedAttempts;
@@ -169,7 +199,7 @@ export default function AdminPage() {
                     setError('Too many failed attempts. You are locked out for 1 hour.');
                 } else {
                     const attemptsLeft = MAX_ATTEMPTS - newAttempts;
-                    setError(`Invalid PIN. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`);
+                    setError(serverError || `Invalid PIN. ${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining.`);
                 }
                 setPinInput('');
             }
@@ -221,7 +251,10 @@ export default function AdminPage() {
         try {
             const response = await fetch('/api/admin/canteen-pin', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-device-id': getDeviceId()
+                },
                 body: JSON.stringify({ adminPin }),
             });
             if (response.ok) {
@@ -250,7 +283,10 @@ export default function AdminPage() {
         try {
             const response = await fetch('/api/admin/canteen-pin', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-device-id': getDeviceId()
+                },
                 body: JSON.stringify({ adminPin, canteenId: selectedCanteen.id, newPin: newCanteenPin }),
             });
 
@@ -289,7 +325,10 @@ export default function AdminPage() {
         try {
             const response = await fetch('/api/admin/pin', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-device-id': getDeviceId()
+                },
                 body: JSON.stringify({ currentPin: adminPin, newPin: newAdminPin }),
             });
 
