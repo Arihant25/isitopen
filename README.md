@@ -14,7 +14,7 @@ A web application for checking the real-time status of shops in IIIT Hyderabad. 
 
 ### For Students
 
-Navigate to the home page and click "I want to Eat" to view the current status of all shops.
+Navigate to the home page and click "I want to Shop" to view the current status of all shops.
 
 ### For Shop Owners
 

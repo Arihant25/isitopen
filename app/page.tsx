@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import {
   Utensils,
+  UtensilsCrossed,
   ChefHat,
   Store,
   Lock,
@@ -21,6 +22,10 @@ import {
   Globe,
   MessageSquare,
   X,
+  HelpCircle,
+  ThumbsUp,
+  ThumbsDown,
+  HandCoins
 } from 'lucide-react';
 import { Analytics } from '@/lib/analytics';
 
@@ -35,6 +40,13 @@ interface Canteen {
   noteUpdatedAt?: string;
 }
 
+interface VotesData {
+  [canteenId: string]: {
+    correctVotes: number;
+    incorrectVotes: number;
+  };
+}
+
 type View = 'landing' | 'student' | 'owner-select' | 'owner-pin' | 'owner-dashboard';
 type Language = 'en' | 'hi' | 'te';
 
@@ -43,7 +55,7 @@ const translations = {
   en: {
     appTitle: 'Is it Open?',
     appSubtitle: 'Check if your favourite shop is open.',
-    iWantToEat: 'I want to Eat',
+    iWantToEat: 'I want to Shop',
     checkStatusList: 'Check status list',
     iAmCanteen: 'I am a Shop',
     updateMyStatus: 'Update my status',
@@ -80,11 +92,20 @@ const translations = {
     noteExpires: 'Expires in',
     hours: 'h',
     minutes: 'm',
+    somethingWrong: 'Something Wrong?',
+    yesItsOpen: 'Yes, it\'s open',
+    noItsClosed: 'No, it\'s closed',
+    yesItsClosed: 'Yes, it\'s closed',
+    noItsOpen: 'No, it\'s open',
+    peopleSaidOpen: 'said it\'s open',
+    peopleSaidClosed: 'said it\'s closed',
+    thankYou: 'Thanks for your feedback!',
+    communityFeedback: 'Community Feedback',
   },
   hi: {
     appTitle: 'क्या खुला है?',
     appSubtitle: 'देखें कि आपकी पसंदीदा दुकान खुली है या नहीं।',
-    iWantToEat: 'मुझे खाना है',
+    iWantToEat: 'मैं खरीदना चाहता हूं',
     checkStatusList: 'स्थिति सूची देखें',
     iAmCanteen: 'मैं दुकान हूं',
     updateMyStatus: 'मेरी स्थिति अपडेट करें',
@@ -121,11 +142,20 @@ const translations = {
     noteExpires: 'समाप्ति में',
     hours: 'घं',
     minutes: 'मि',
+    somethingWrong: 'कुछ गलत है?',
+    yesItsOpen: 'हां, यह खुला है',
+    noItsClosed: 'नहीं, यह बंद है',
+    yesItsClosed: 'हां, यह बंद है',
+    noItsOpen: 'नहीं, यह खुला है',
+    peopleSaidOpen: 'ने कहा यह खुला है',
+    peopleSaidClosed: 'ने कहा यह बंद है',
+    thankYou: 'आपकी प्रतिक्रिया के लिए धन्यवाद!',
+    communityFeedback: 'समुदाय प्रतिक्रिया',
   },
   te: {
     appTitle: 'తెరిచి ఉందా?',
     appSubtitle: 'మీ ఇష్టమైన షాప్ తెరిచి ఉందో చూడండి.',
-    iWantToEat: 'నాకు తినాలి',
+    iWantToEat: 'నేను షాపింగ్ చేయాలనుకుంటున్నాను',
     checkStatusList: 'స్థితి జాబితా చూడండి',
     iAmCanteen: 'నేను షాప్ ని',
     updateMyStatus: 'నా స్థితిని అప్డేట్ చేయండి',
@@ -162,6 +192,15 @@ const translations = {
     noteExpires: 'గడువు ముగుస్తుంది',
     hours: 'గం',
     minutes: 'ని',
+    somethingWrong: 'ఏదైనా తప్పు?',
+    yesItsOpen: 'అవును, ఇది తెరిచి ఉంది',
+    noItsClosed: 'లేదు, ఇది మూసి ఉంది',
+    yesItsClosed: 'అవును, ఇది మూసి ఉంది',
+    noItsOpen: 'లేదు, ఇది తెరిచి ఉంది',
+    peopleSaidOpen: 'మంది ఇది తెరిచి ఉందని చెప్పారు',
+    peopleSaidClosed: 'మంది ఇది మూసి ఉందని చెప్పారు',
+    thankYou: 'మీ అభిప్రాయానికి ధన్యవాదాలు!',
+    communityFeedback: 'సమాజ అభిప్రాయం',
   },
 };
 
@@ -183,6 +222,162 @@ const LanguageContext = createContext<{
 });
 
 const useLanguage = () => useContext(LanguageContext);
+
+// --- Voting Dialog Component ---
+const VotingDialog = ({
+  canteen,
+  votes,
+  onClose,
+  onVote
+}: {
+  canteen: Canteen;
+  votes: { correctVotes: number; incorrectVotes: number } | undefined;
+  onClose: () => void;
+  onVote: (canteenId: string, voteType: 'correct' | 'incorrect') => void;
+}) => {
+  const { t } = useLanguage();
+  const [hasVoted, setHasVoted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const correctVotes = votes?.correctVotes || 0;
+  const incorrectVotes = votes?.incorrectVotes || 0;
+  const totalVotes = correctVotes + incorrectVotes;
+  const correctPercent = totalVotes > 0 ? (correctVotes / totalVotes) * 100 : 50;
+
+  const handleVote = async (voteType: 'correct' | 'incorrect') => {
+    setSubmitting(true);
+    await onVote(canteen.id, voteType);
+    setHasVoted(true);
+    setSubmitting(false);
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+        onClick={onClose}
+      />
+
+      {/* Dialog */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-5 border border-slate-700">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white">{t.somethingWrong}</h3>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-slate-700 rounded-full transition-colors"
+            >
+              <X size={20} className="text-slate-400" />
+            </button>
+          </div>
+
+          {/* Canteen info */}
+          <div className="flex items-center gap-3 mb-5 p-3 bg-slate-700/50 rounded-xl">
+            <div className={`p-2 rounded-full ${canteen.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+              <CanteenIcon type={canteen.icon} size={20} />
+            </div>
+            <div>
+              <p className="font-semibold text-white">{canteen.name}</p>
+              <p className={`text-sm ${canteen.status === 'open' ? 'text-green-400' : 'text-red-400'}`}>
+                {canteen.status === 'open' ? t.open : t.closed}
+              </p>
+            </div>
+          </div>
+
+          {/* Vote buttons or thank you message */}
+          {hasVoted ? (
+            <div className="text-center py-4">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-green-500/20 rounded-full mb-3">
+                <ThumbsUp className="text-green-400" size={24} />
+              </div>
+              <p className="text-white font-medium">{t.thankYou}</p>
+            </div>
+          ) : (
+            <div className="space-y-3 mb-5">
+              {canteen.status === 'open' ? (
+                /* When status shows OPEN, ask if it's really open */
+                <>
+                  <button
+                    onClick={() => handleVote('correct')}
+                    disabled={submitting}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                  >
+                    <ThumbsUp size={18} />
+                    {t.yesItsOpen}
+                  </button>
+                  <button
+                    onClick={() => handleVote('incorrect')}
+                    disabled={submitting}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                  >
+                    <ThumbsDown size={18} />
+                    {t.noItsClosed}
+                  </button>
+                </>
+              ) : (
+                /* When status shows CLOSED, ask if it's really closed */
+                <>
+                  <button
+                    onClick={() => handleVote('correct')}
+                    disabled={submitting}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                  >
+                    <ThumbsUp size={18} />
+                    {t.yesItsClosed}
+                  </button>
+                  <button
+                    onClick={() => handleVote('incorrect')}
+                    disabled={submitting}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                  >
+                    <ThumbsDown size={18} />
+                    {t.noItsOpen}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Community feedback section */}
+          {totalVotes > 0 && (
+            <div className="border-t border-slate-700 pt-4">
+              <p className="text-slate-400 text-sm font-medium mb-3">{t.communityFeedback}</p>
+
+              {/* Vote counts */}
+              <div className="flex justify-between text-sm mb-2">
+                {canteen.status === 'open' ? (
+                  <>
+                    <span className="text-green-400">{correctVotes} {t.peopleSaidOpen}</span>
+                    <span className="text-red-400">{incorrectVotes} {t.peopleSaidClosed}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-red-400">{correctVotes} {t.peopleSaidClosed}</span>
+                    <span className="text-green-400">{incorrectVotes} {t.peopleSaidOpen}</span>
+                  </>
+                )}
+              </div>
+
+              {/* Bar graph */}
+              <div className="h-4 bg-slate-700 rounded-full overflow-hidden flex">
+                <div
+                  className="bg-green-500 transition-all duration-300"
+                  style={{ width: `${correctPercent}%` }}
+                />
+                <div
+                  className="bg-red-500 transition-all duration-300"
+                  style={{ width: `${100 - correctPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
 
 // --- Language Toggle Component ---
 const LanguageToggle = () => {
@@ -239,7 +434,8 @@ const Loading = () => {
 
 // Icon Helper
 const CanteenIcon = ({ type, size = 24, className }: { type: string; size?: number; className?: string }) => {
-  if (type === 'rice' || type === 'meat') return <Utensils size={size} className={className} />;
+  if (type === 'rice') return <UtensilsCrossed size={size} className={className} />;
+  if (type === 'meat') return <Utensils size={size} className={className} />;
   if (type === 'coffee') return <Coffee size={size} className={className} />;
   if (type === 'pizza') return <Pizza size={size} className={className} />;
   if (type === 'drink') return <CupSoda size={size} className={className} />;
@@ -319,6 +515,10 @@ export default function Home() {
   const [noteInput, setNoteInput] = useState('');
   const [savingNote, setSavingNote] = useState(false);
 
+  // Community votes state
+  const [votes, setVotes] = useState<VotesData>({});
+  const [votingCanteen, setVotingCanteen] = useState<Canteen | null>(null);
+
   // Pull to refresh state
   const [pullStartY, setPullStartY] = useState(0);
   const [pullDistance, setPullDistance] = useState(0);
@@ -347,16 +547,56 @@ export default function Home() {
     }
   }, []);
 
+  // Fetch community votes
+  const fetchVotes = useCallback(async () => {
+    try {
+      const response = await fetch('/api/votes');
+      if (response.ok) {
+        const data = await response.json();
+        setVotes(data.votes || {});
+      }
+    } catch (error) {
+      console.error('Failed to fetch votes:', error);
+    }
+  }, []);
+
+  // Submit a vote
+  const submitVote = async (canteenId: string, voteType: 'correct' | 'incorrect') => {
+    try {
+      const response = await fetch('/api/votes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canteenId, voteType }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setVotes(prev => ({
+          ...prev,
+          [canteenId]: {
+            correctVotes: data.correctVotes,
+            incorrectVotes: data.incorrectVotes,
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to submit vote:', error);
+    }
+  };
+
   // Initial fetch and polling for real-time updates
   useEffect(() => {
     fetchCanteens();
+    fetchVotes();
     Analytics.pageView(); // Track page view on load
 
     // Poll every 5 seconds for updates
-    const interval = setInterval(fetchCanteens, 5000);
+    const interval = setInterval(() => {
+      fetchCanteens();
+      fetchVotes();
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [fetchCanteens]);
+  }, [fetchCanteens, fetchVotes]);
 
   // --- Handlers ---
   const handleCanteenSelect = (id: string) => {
@@ -544,7 +784,7 @@ export default function Home() {
               className="w-full group relative flex flex-col items-center p-6 bg-white rounded-2xl text-slate-900 shadow-xl hover:bg-blue-50 transition-all active:scale-95"
             >
               <div className="bg-blue-100 p-4 rounded-full mb-3 group-hover:bg-blue-200">
-                <Utensils className="w-8 h-8 text-blue-600" />
+                <HandCoins className="w-8 h-8 text-blue-600" />
               </div>
               <span className="text-xl font-bold">{t.iWantToEat}</span>
               <span className="text-sm text-slate-500">{t.checkStatusList}</span>
@@ -647,9 +887,18 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className={`px-3 py-1 rounded-full text-sm font-bold ${isOpen ? 'bg-green-600 text-white' : 'bg-red-500/20 text-red-400'
-                        }`}>
-                        {isOpen ? t.open : t.closed}
+                      <div className="flex items-center gap-2">
+                        <div className={`px-3 py-1 rounded-full text-sm font-bold ${isOpen ? 'bg-green-600 text-white' : 'bg-red-500/20 text-red-400'
+                          }`}>
+                          {isOpen ? t.open : t.closed}
+                        </div>
+                        <button
+                          onClick={() => setVotingCanteen(canteen)}
+                          className="p-2 rounded-full hover:bg-slate-700 transition-colors text-slate-400 hover:text-slate-200"
+                          title={t.somethingWrong}
+                        >
+                          <HelpCircle size={18} />
+                        </button>
                       </div>
                     </div>
 
@@ -664,6 +913,16 @@ export default function Home() {
               })}
             </div>
           </div>
+
+          {/* Voting Dialog */}
+          {votingCanteen && (
+            <VotingDialog
+              canteen={votingCanteen}
+              votes={votes[votingCanteen.id]}
+              onClose={() => setVotingCanteen(null)}
+              onVote={submitVote}
+            />
+          )}
         </div>
       </LanguageContext.Provider>
     );
