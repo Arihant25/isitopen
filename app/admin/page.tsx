@@ -31,6 +31,7 @@ interface CanteenPin {
 
 const LOCKOUT_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
 const MAX_ATTEMPTS = 3;
+const ATTEMPT_RESET_DURATION = 60 * 60 * 1000; // Reset failed attempts after 1 hour of no failures
 
 export default function AdminPage() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,6 +42,7 @@ export default function AdminPage() {
     const [failedAttempts, setFailedAttempts] = useState(0);
     const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
     const [remainingTime, setRemainingTime] = useState<string>('');
+    const [lastFailedAttempt, setLastFailedAttempt] = useState<number | null>(null);
     const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [startDate, setStartDate] = useState<string>('');
@@ -65,6 +67,7 @@ export default function AdminPage() {
     useEffect(() => {
         const storedLockout = localStorage.getItem('adminLockoutUntil');
         const storedAttempts = localStorage.getItem('adminFailedAttempts');
+        const storedLastFailed = localStorage.getItem('adminLastFailedAttempt');
 
         if (storedLockout) {
             const lockoutTime = parseInt(storedLockout, 10);
@@ -73,11 +76,20 @@ export default function AdminPage() {
             } else {
                 localStorage.removeItem('adminLockoutUntil');
                 localStorage.removeItem('adminFailedAttempts');
+                localStorage.removeItem('adminLastFailedAttempt');
             }
         }
 
-        if (storedAttempts) {
-            setFailedAttempts(parseInt(storedAttempts, 10));
+        if (storedAttempts && storedLastFailed) {
+            const lastFailedTime = parseInt(storedLastFailed, 10);
+            // Reset failed attempts if the last failure was more than ATTEMPT_RESET_DURATION ago
+            if (Date.now() - lastFailedTime > ATTEMPT_RESET_DURATION) {
+                localStorage.removeItem('adminFailedAttempts');
+                localStorage.removeItem('adminLastFailedAttempt');
+            } else {
+                setFailedAttempts(parseInt(storedAttempts, 10));
+                setLastFailedAttempt(lastFailedTime);
+            }
         }
     }, []);
 
@@ -132,12 +144,23 @@ export default function AdminPage() {
                 setAdminPin(pinInput); // Store the admin PIN for future API calls
                 // Clear failed attempts on successful login
                 setFailedAttempts(0);
+                setLastFailedAttempt(null);
                 localStorage.removeItem('adminFailedAttempts');
                 localStorage.removeItem('adminLockoutUntil');
+                localStorage.removeItem('adminLastFailedAttempt');
             } else {
-                const newAttempts = failedAttempts + 1;
+                // Check if last failed attempt was more than ATTEMPT_RESET_DURATION ago, reset counter if so
+                const now = Date.now();
+                let currentAttempts = failedAttempts;
+                if (lastFailedAttempt && now - lastFailedAttempt > ATTEMPT_RESET_DURATION) {
+                    currentAttempts = 0;
+                }
+
+                const newAttempts = currentAttempts + 1;
                 setFailedAttempts(newAttempts);
+                setLastFailedAttempt(now);
                 localStorage.setItem('adminFailedAttempts', newAttempts.toString());
+                localStorage.setItem('adminLastFailedAttempt', now.toString());
 
                 if (newAttempts >= MAX_ATTEMPTS) {
                     const lockoutTime = Date.now() + LOCKOUT_DURATION;

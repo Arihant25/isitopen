@@ -27,6 +27,15 @@ export interface Canteen {
     status: 'open' | 'closed';
     lastUpdated: Date;
     pin: string;
+    note?: string;
+    noteUpdatedAt?: Date;
+}
+
+// Check if a note has expired (12 hours)
+export function isNoteExpired(noteUpdatedAt?: Date): boolean {
+    if (!noteUpdatedAt) return true;
+    const expiryTime = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+    return Date.now() - new Date(noteUpdatedAt).getTime() > expiryTime;
 }
 
 export interface AnalyticsEvent {

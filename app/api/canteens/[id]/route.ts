@@ -26,7 +26,7 @@ export async function GET(
     }
 }
 
-// PATCH - Toggle canteen status
+// PATCH - Toggle canteen status or update note
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -34,7 +34,7 @@ export async function PATCH(
     try {
         const { id } = await params;
         const body = await request.json();
-        const { status, pin } = body;
+        const { status, pin, note } = body;
 
         const { db } = await connectToDatabase();
         const collection = db.collection<Canteen>('canteens');
@@ -50,19 +50,33 @@ export async function PATCH(
             return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });
         }
 
-        // Validate status value
-        if (status !== 'open' && status !== 'closed') {
-            return NextResponse.json({ error: 'Invalid status. Must be "open" or "closed"' }, { status: 400 });
+        // Build update object
+        const updateFields: Record<string, unknown> = {
+            lastUpdated: new Date()
+        };
+
+        // Handle status update
+        if (status !== undefined) {
+            // Validate status value
+            if (status !== 'open' && status !== 'closed') {
+                return NextResponse.json({ error: 'Invalid status. Must be "open" or "closed"' }, { status: 400 });
+            }
+            updateFields.status = status;
+        }
+
+        // Handle note update (can be set to empty string to clear)
+        if (note !== undefined) {
+            // Validate note length (max 240 characters)
+            if (typeof note === 'string' && note.length > 240) {
+                return NextResponse.json({ error: 'Note must be 240 characters or less' }, { status: 400 });
+            }
+            updateFields.note = note;
+            updateFields.noteUpdatedAt = new Date();
         }
 
         const result = await collection.findOneAndUpdate(
             { id },
-            {
-                $set: {
-                    status: status,
-                    lastUpdated: new Date()
-                }
-            },
+            { $set: updateFields },
             { returnDocument: 'after' }
         );
 

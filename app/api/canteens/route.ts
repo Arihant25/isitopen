@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase, INITIAL_CANTEENS, Canteen } from '@/lib/mongodb';
+import { connectToDatabase, INITIAL_CANTEENS, Canteen, isNoteExpired } from '@/lib/mongodb';
 
 // GET all canteens
 export async function GET() {
@@ -36,8 +36,14 @@ export async function GET() {
         // Sort by name for consistent ordering
         canteens.sort((a, b) => a.name.localeCompare(b.name));
 
-        // Return canteens without exposing the PIN
-        const canteensWithoutPin = canteens.map(({ pin, ...rest }) => rest);
+        // Return canteens without exposing the PIN and filter out expired notes
+        const canteensWithoutPin = canteens.map(({ pin, note, noteUpdatedAt, ...rest }) => {
+            // Only include note if it hasn't expired
+            if (note && noteUpdatedAt && !isNoteExpired(noteUpdatedAt)) {
+                return { ...rest, note, noteUpdatedAt };
+            }
+            return rest;
+        });
 
         return NextResponse.json(canteensWithoutPin);
     } catch (error) {
