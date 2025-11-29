@@ -856,6 +856,7 @@ export default function Home() {
     );
   }
 
+  const inactiveCanteenIds = new Set(['devids', 'dammams-milk-canteen', 'cie-canteen', 'uncles', 'vindhya-stationary']);
   // VIEW: STUDENT LIST
   if (view === 'student') {
     const sortedCanteens = [...canteens].sort((a, b) => {
@@ -916,6 +917,7 @@ export default function Home() {
                 const totalVotes = correctVotes + incorrectVotes;
                 // Show warning if there are votes and more people disagree with the status
                 const showVoteWarning = totalVotes >= 2 && incorrectVotes > correctVotes;
+                const isInactive = inactiveCanteenIds.has(canteen.id);
 
                 return (
                   <div
@@ -962,6 +964,13 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
+
+                    {isInactive && (
+                      <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-yellow-400">
+                        <AlertTriangle size={14} />
+                        <span>Currently Inactive</span>
+                      </div>
+                    )}
 
                     {/* Note display */}
                     {canteen.note && (
