@@ -1,0 +1,9 @@
+{
+    "name": "Is it Open?",
+    "short_name": "Is it Open?",
+    "description": "Check if your favorite stall at IIIT Hyderabad is open",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1e293b",
+    "theme_color": "#1e293b"
+}

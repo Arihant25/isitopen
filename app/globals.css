@@ -12,15 +12,114 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Remove tap highlight on mobile */
+.tap-highlight-transparent {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Loader Animation */
+.loader {
+  position: relative;
+  width: 64px;
+  height: 60px;
+}
+
+.loader::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  background: #fff;
+  width: 64px;
+  height: 32px;
+  border-radius: 0 0 50px 50px;
+  animation: move 0.5s linear infinite alternate;
+}
+
+.loader::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  background: #FF3D00;
+  width: 24px;
+  height: 24px;
+  transform: translateX(-50%) rotate(0deg);
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  100% {
+    transform: translateX(-50%) rotate(360deg)
+  }
+}
+
+@keyframes move {
+  0% {
+    transform: rotate(10deg)
+  }
+
+  100% {
+    transform: rotate(-10deg)
+  }
+}
+
+/* Small loader variant */
+.loader-sm {
+  position: relative;
+  width: 32px;
+  height: 30px;
+}
+
+.loader-sm::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  background: currentColor;
+  width: 32px;
+  height: 16px;
+  border-radius: 0 0 25px 25px;
+  animation: move 0.5s linear infinite alternate;
+}
+
+.loader-sm::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  background: #FF3D00;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%) rotate(0deg);
+  animation: rotate 2s linear infinite;
 }
