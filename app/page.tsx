@@ -521,16 +521,6 @@ export default function Home() {
 
   const t = translations[language];
 
-  // Get or create device ID
-  const getDeviceId = useCallback(() => {
-    let deviceId = localStorage.getItem('deviceId');
-    if (!deviceId) {
-      deviceId = crypto.randomUUID();
-      localStorage.setItem('deviceId', deviceId);
-    }
-    return deviceId;
-  }, []);
-
   // Load language from localStorage on mount (client-side only)
   useEffect(() => {
     const saved = localStorage.getItem('language');
@@ -630,8 +620,7 @@ export default function Home() {
       const response = await fetch(`/api/canteens/${selectedCanteenId}`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
-          'x-device-id': getDeviceId()
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           status: canteen.status, // Keep same status, just verify PIN
@@ -669,8 +658,7 @@ export default function Home() {
       const response = await fetch(`/api/canteens/${selectedCanteenId}`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
-          'x-device-id': getDeviceId()
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           status: newStatus,
@@ -736,8 +724,7 @@ export default function Home() {
       const response = await fetch(`/api/canteens/${selectedCanteenId}`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
-          'x-device-id': getDeviceId()
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ note, pin: verifiedPin }),
       });

@@ -149,7 +149,7 @@ export async function verifyAdminPin(pin: string): Promise<boolean> {
 
 // Rate limiting interface
 export interface RateLimitEntry {
-    key: string; // Changed from 'ip' to 'key' to support composite keys
+    key: string; // Composite key: action_type:resource_id:ip_address
     attempts: number;
     lastAttempt: Date;
     lockoutUntil?: Date | null;

@@ -36,12 +36,12 @@ export async function PATCH(
         const body = await request.json();
         const { status, pin, note } = body;
 
-        // Get identifier (Device ID or IP)
-        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
-        const deviceId = request.headers.get('x-device-id');
-        const identifier = deviceId || ip;
+        // Get IP address for rate limiting
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+            request.headers.get('x-real-ip') ||
+            'unknown';
 
-        const rateLimitKey = `canteen_login:${id}:${identifier}`;
+        const rateLimitKey = `canteen_login:${id}:${ip}`;
 
         // Check rate limit
         const { allowed, remainingTime } = await checkRateLimit(rateLimitKey);

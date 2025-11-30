@@ -48,16 +48,6 @@ export default function AdminPage() {
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-    // Get or create device ID
-    const getDeviceId = useCallback(() => {
-        let deviceId = localStorage.getItem('deviceId');
-        if (!deviceId) {
-            deviceId = crypto.randomUUID();
-            localStorage.setItem('deviceId', deviceId);
-        }
-        return deviceId;
-    }, []);
-
     // PIN Management State
     const [canteens, setCanteens] = useState<CanteenPin[]>([]);
     const [showEditDialog, setShowEditDialog] = useState(false);
@@ -146,8 +136,7 @@ export default function AdminPage() {
             const response = await fetch('/api/admin/verify', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-device-id': getDeviceId()
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ pin: pinInput }),
             });
@@ -252,8 +241,7 @@ export default function AdminPage() {
             const response = await fetch('/api/admin/canteen-pin', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-device-id': getDeviceId()
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ adminPin }),
             });
@@ -284,8 +272,7 @@ export default function AdminPage() {
             const response = await fetch('/api/admin/canteen-pin', {
                 method: 'PATCH',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-device-id': getDeviceId()
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ adminPin, canteenId: selectedCanteen.id, newPin: newCanteenPin }),
             });
@@ -326,8 +313,7 @@ export default function AdminPage() {
             const response = await fetch('/api/admin/pin', {
                 method: 'PATCH',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'x-device-id': getDeviceId()
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ currentPin: adminPin, newPin: newAdminPin }),
             });

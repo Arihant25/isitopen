@@ -7,12 +7,12 @@ export async function PATCH(request: NextRequest) {
         const body = await request.json();
         const { adminPin, canteenId, newPin } = body;
 
-        // Get identifier (Device ID or IP)
-        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
-        const deviceId = request.headers.get('x-device-id');
-        const identifier = deviceId || ip;
+        // Get IP address for rate limiting
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+            request.headers.get('x-real-ip') ||
+            'unknown';
 
-        const rateLimitKey = `admin_canteen_pin_change:${identifier}`;
+        const rateLimitKey = `admin_canteen_pin_change:${ip}`;
 
         // Check rate limit
         const { allowed, remainingTime } = await checkRateLimit(rateLimitKey);
@@ -75,12 +75,12 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { adminPin } = body;
 
-        // Get identifier (Device ID or IP)
-        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
-        const deviceId = request.headers.get('x-device-id');
-        const identifier = deviceId || ip;
+        // Get IP address for rate limiting
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+            request.headers.get('x-real-ip') ||
+            'unknown';
 
-        const rateLimitKey = `admin_get_canteens:${identifier}`;
+        const rateLimitKey = `admin_get_canteens:${ip}`;
 
         // Check rate limit
         const { allowed, remainingTime } = await checkRateLimit(rateLimitKey);
