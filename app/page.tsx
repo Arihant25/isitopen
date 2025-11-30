@@ -371,14 +371,29 @@ const VotingDialog = ({
 
               {/* Bar graph */}
               <div className="h-4 bg-slate-700 rounded-full overflow-hidden flex">
-                <div
-                  className="bg-green-500 transition-all duration-300"
-                  style={{ width: `${correctPercent}%` }}
-                />
-                <div
-                  className="bg-red-500 transition-all duration-300"
-                  style={{ width: `${100 - correctPercent}%` }}
-                />
+                {canteen.status === 'open' ? (
+                  <>
+                    <div
+                      className="bg-green-500 transition-all duration-300"
+                      style={{ width: `${correctPercent}%` }}
+                    />
+                    <div
+                      className="bg-red-500 transition-all duration-300"
+                      style={{ width: `${100 - correctPercent}%` }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div
+                      className="bg-red-500 transition-all duration-300"
+                      style={{ width: `${correctPercent}%` }}
+                    />
+                    <div
+                      className="bg-green-500 transition-all duration-300"
+                      style={{ width: `${100 - correctPercent}%` }}
+                    />
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -1001,14 +1016,29 @@ export default function Home() {
                           </span>
                         </div>
                         <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden flex">
-                          <div
-                            className="bg-green-500 transition-all duration-300"
-                            style={{ width: `${(correctVotes / totalVotes) * 100}%` }}
-                          />
-                          <div
-                            className="bg-red-500 transition-all duration-300"
-                            style={{ width: `${(incorrectVotes / totalVotes) * 100}%` }}
-                          />
+                          {isOpen ? (
+                            <>
+                              <div
+                                className="bg-green-500 transition-all duration-300"
+                                style={{ width: `${(correctVotes / totalVotes) * 100}%` }}
+                              />
+                              <div
+                                className="bg-red-500 transition-all duration-300"
+                                style={{ width: `${(incorrectVotes / totalVotes) * 100}%` }}
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <div
+                                className="bg-red-500 transition-all duration-300"
+                                style={{ width: `${(correctVotes / totalVotes) * 100}%` }}
+                              />
+                              <div
+                                className="bg-green-500 transition-all duration-300"
+                                style={{ width: `${(incorrectVotes / totalVotes) * 100}%` }}
+                              />
+                            </>
+                          )}
                         </div>
                       </div>
                     )}

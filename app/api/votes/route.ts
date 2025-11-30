@@ -96,6 +96,15 @@ export async function POST(request: NextRequest) {
         }
 
         const { db } = await connectToDatabase();
+
+        // Check if canteen exists
+        const canteensCollection = db.collection('canteens');
+        const canteenExists = await canteensCollection.findOne({ id: canteenId });
+
+        if (!canteenExists) {
+            return NextResponse.json({ error: 'Canteen not found' }, { status: 404 });
+        }
+
         const collection = db.collection<CommunityVote>('communityVotes');
 
         const periodStart = getCurrentPeriodStart();
