@@ -45,8 +45,8 @@ interface Canteen {
 
 interface VotesData {
   [canteenId: string]: {
-    correctVotes: number;
-    incorrectVotes: number;
+    openVotes: number;
+    closedVotes: number;
   };
 }
 
@@ -240,20 +240,20 @@ const VotingDialog = ({
   onVote
 }: {
   canteen: Canteen;
-  votes: { correctVotes: number; incorrectVotes: number } | undefined;
+  votes: { openVotes: number; closedVotes: number } | undefined;
   onClose: () => void;
-  onVote: (canteenId: string, voteType: 'correct' | 'incorrect') => void;
+  onVote: (canteenId: string, voteType: 'open' | 'closed') => void;
 }) => {
   const { t } = useLanguage();
   const [hasVoted, setHasVoted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const correctVotes = votes?.correctVotes || 0;
-  const incorrectVotes = votes?.incorrectVotes || 0;
-  const totalVotes = correctVotes + incorrectVotes;
-  const correctPercent = totalVotes > 0 ? (correctVotes / totalVotes) * 100 : 50;
+  const openVotes = votes?.openVotes || 0;
+  const closedVotes = votes?.closedVotes || 0;
+  const totalVotes = openVotes + closedVotes;
+  const openPercent = totalVotes > 0 ? (openVotes / totalVotes) * 100 : 50;
 
-  const handleVote = async (voteType: 'correct' | 'incorrect') => {
+  const handleVote = async (voteType: 'open' | 'closed') => {
     setSubmitting(true);
     await onVote(canteen.id, voteType);
     setHasVoted(true);
@@ -309,7 +309,7 @@ const VotingDialog = ({
                 /* When status shows OPEN, ask if it's really open */
                 <>
                   <button
-                    onClick={() => handleVote('correct')}
+                    onClick={() => handleVote('open')}
                     disabled={submitting}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
                   >
@@ -317,7 +317,7 @@ const VotingDialog = ({
                     {t.yesItsOpen}
                   </button>
                   <button
-                    onClick={() => handleVote('incorrect')}
+                    onClick={() => handleVote('closed')}
                     disabled={submitting}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
                   >
@@ -329,7 +329,7 @@ const VotingDialog = ({
                 /* When status shows CLOSED, ask if it's really closed */
                 <>
                   <button
-                    onClick={() => handleVote('correct')}
+                    onClick={() => handleVote('closed')}
                     disabled={submitting}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
                   >
@@ -337,7 +337,7 @@ const VotingDialog = ({
                     {t.yesItsClosed}
                   </button>
                   <button
-                    onClick={() => handleVote('incorrect')}
+                    onClick={() => handleVote('open')}
                     disabled={submitting}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
                   >
@@ -356,44 +356,20 @@ const VotingDialog = ({
 
               {/* Vote counts */}
               <div className="flex justify-between text-sm mb-2">
-                {canteen.status === 'open' ? (
-                  <>
-                    <span className="text-green-400">{correctVotes} {t.peopleSaidOpen}</span>
-                    <span className="text-red-400">{incorrectVotes} {t.peopleSaidClosed}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-red-400">{correctVotes} {t.peopleSaidClosed}</span>
-                    <span className="text-green-400">{incorrectVotes} {t.peopleSaidOpen}</span>
-                  </>
-                )}
+                <span className="text-green-400">{openVotes} {t.peopleSaidOpen}</span>
+                <span className="text-red-400">{closedVotes} {t.peopleSaidClosed}</span>
               </div>
 
               {/* Bar graph */}
               <div className="h-4 bg-slate-700 rounded-full overflow-hidden flex">
-                {canteen.status === 'open' ? (
-                  <>
-                    <div
-                      className="bg-green-500 transition-all duration-300"
-                      style={{ width: `${correctPercent}%` }}
-                    />
-                    <div
-                      className="bg-red-500 transition-all duration-300"
-                      style={{ width: `${100 - correctPercent}%` }}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <div
-                      className="bg-red-500 transition-all duration-300"
-                      style={{ width: `${correctPercent}%` }}
-                    />
-                    <div
-                      className="bg-green-500 transition-all duration-300"
-                      style={{ width: `${100 - correctPercent}%` }}
-                    />
-                  </>
-                )}
+                <div
+                  className="bg-green-500 transition-all duration-300"
+                  style={{ width: `${openPercent}%` }}
+                />
+                <div
+                  className="bg-red-500 transition-all duration-300"
+                  style={{ width: `${100 - openPercent}%` }}
+                />
               </div>
             </div>
           )}
@@ -597,7 +573,7 @@ export default function Home() {
   }, []);
 
   // Submit a vote
-  const submitVote = async (canteenId: string, voteType: 'correct' | 'incorrect') => {
+  const submitVote = async (canteenId: string, voteType: 'open' | 'closed') => {
     try {
       const response = await fetch('/api/votes', {
         method: 'POST',
@@ -609,8 +585,8 @@ export default function Home() {
         setVotes(prev => ({
           ...prev,
           [canteenId]: {
-            correctVotes: data.correctVotes,
-            incorrectVotes: data.incorrectVotes,
+            openVotes: data.openVotes,
+            closedVotes: data.closedVotes,
           }
         }));
       }
@@ -930,11 +906,13 @@ export default function Home() {
               {sortedCanteens.map((canteen) => {
                 const isOpen = canteen.status === 'open';
                 const canteenVotes = votes[canteen.id];
-                const correctVotes = canteenVotes?.correctVotes || 0;
-                const incorrectVotes = canteenVotes?.incorrectVotes || 0;
-                const totalVotes = correctVotes + incorrectVotes;
-                // Show warning if there are votes and more people disagree with the status
-                const showVoteWarning = totalVotes >= 2 && incorrectVotes > correctVotes;
+                const openVotes = canteenVotes?.openVotes || 0;
+                const closedVotes = canteenVotes?.closedVotes || 0;
+                const totalVotes = openVotes + closedVotes;
+                // Show warning if there are votes and people disagree with the status
+                const showVoteWarning = totalVotes >= 2 && (
+                  (isOpen && closedVotes > openVotes) || (!isOpen && openVotes > closedVotes)
+                );
                 const isInactive = inactiveCanteenIds.has(canteen.id);
 
                 return (
@@ -1008,37 +986,22 @@ export default function Home() {
                         onClick={() => setVotingCanteen(canteen)}
                       >
                         <div className="flex justify-between text-xs text-slate-400 mb-1.5">
-                          <span className={correctVotes > incorrectVotes ? 'text-green-400' : ''}>
-                            {correctVotes} {isOpen ? t.peopleSaidOpen : t.peopleSaidClosed}
+                          <span className={openVotes > closedVotes ? 'text-green-400' : ''}>
+                            {openVotes} {t.peopleSaidOpen}
                           </span>
-                          <span className={incorrectVotes > correctVotes ? 'text-yellow-400' : ''}>
-                            {incorrectVotes} {isOpen ? t.peopleSaidClosed : t.peopleSaidOpen}
+                          <span className={closedVotes > openVotes ? 'text-yellow-400' : ''}>
+                            {closedVotes} {t.peopleSaidClosed}
                           </span>
                         </div>
                         <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden flex">
-                          {isOpen ? (
-                            <>
-                              <div
-                                className="bg-green-500 transition-all duration-300"
-                                style={{ width: `${(correctVotes / totalVotes) * 100}%` }}
-                              />
-                              <div
-                                className="bg-red-500 transition-all duration-300"
-                                style={{ width: `${(incorrectVotes / totalVotes) * 100}%` }}
-                              />
-                            </>
-                          ) : (
-                            <>
-                              <div
-                                className="bg-red-500 transition-all duration-300"
-                                style={{ width: `${(correctVotes / totalVotes) * 100}%` }}
-                              />
-                              <div
-                                className="bg-green-500 transition-all duration-300"
-                                style={{ width: `${(incorrectVotes / totalVotes) * 100}%` }}
-                              />
-                            </>
-                          )}
+                          <div
+                            className="bg-green-500 transition-all duration-300"
+                            style={{ width: `${(openVotes / totalVotes) * 100}%` }}
+                          />
+                          <div
+                            className="bg-red-500 transition-all duration-300"
+                            style={{ width: `${(closedVotes / totalVotes) * 100}%` }}
+                          />
                         </div>
                       </div>
                     )}

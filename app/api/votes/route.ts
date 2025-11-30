@@ -3,15 +3,15 @@ import { connectToDatabase } from '@/lib/mongodb';
 
 export interface CommunityVote {
     canteenId: string;
-    voteType: 'correct' | 'incorrect';
+    voteType: 'open' | 'closed';
     timestamp: Date;
     periodStart: Date; // Start of the 12-hour period
 }
 
 export interface VoteSummary {
     canteenId: string;
-    correctVotes: number;
-    incorrectVotes: number;
+    openVotes: number;
+    closedVotes: number;
     periodStart: Date;
 }
 
@@ -51,22 +51,22 @@ export async function GET(request: NextRequest) {
             {
                 $group: {
                     _id: '$canteenId',
-                    correctVotes: {
-                        $sum: { $cond: [{ $eq: ['$voteType', 'correct'] }, 1, 0] }
+                    openVotes: {
+                        $sum: { $cond: [{ $eq: ['$voteType', 'open'] }, 1, 0] }
                     },
-                    incorrectVotes: {
-                        $sum: { $cond: [{ $eq: ['$voteType', 'incorrect'] }, 1, 0] }
+                    closedVotes: {
+                        $sum: { $cond: [{ $eq: ['$voteType', 'closed'] }, 1, 0] }
                     }
                 }
             }
         ]).toArray();
 
         // Transform to a map for easier frontend consumption
-        const votesMap: Record<string, { correctVotes: number; incorrectVotes: number }> = {};
+        const votesMap: Record<string, { openVotes: number; closedVotes: number }> = {};
         voteSummary.forEach(item => {
             votesMap[item._id] = {
-                correctVotes: item.correctVotes,
-                incorrectVotes: item.incorrectVotes
+                openVotes: item.openVotes,
+                closedVotes: item.closedVotes
             };
         });
 
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'canteenId is required' }, { status: 400 });
         }
 
-        if (voteType !== 'correct' && voteType !== 'incorrect') {
-            return NextResponse.json({ error: 'voteType must be "correct" or "incorrect"' }, { status: 400 });
+        if (voteType !== 'open' && voteType !== 'closed') {
+            return NextResponse.json({ error: 'voteType must be "open" or "closed"' }, { status: 400 });
         }
 
         const { db } = await connectToDatabase();
@@ -128,23 +128,23 @@ export async function POST(request: NextRequest) {
             {
                 $group: {
                     _id: '$canteenId',
-                    correctVotes: {
-                        $sum: { $cond: [{ $eq: ['$voteType', 'correct'] }, 1, 0] }
+                    openVotes: {
+                        $sum: { $cond: [{ $eq: ['$voteType', 'open'] }, 1, 0] }
                     },
-                    incorrectVotes: {
-                        $sum: { $cond: [{ $eq: ['$voteType', 'incorrect'] }, 1, 0] }
+                    closedVotes: {
+                        $sum: { $cond: [{ $eq: ['$voteType', 'closed'] }, 1, 0] }
                     }
                 }
             }
         ]).toArray();
 
-        const summary = voteSummary[0] || { correctVotes: 0, incorrectVotes: 0 };
+        const summary = voteSummary[0] || { openVotes: 0, closedVotes: 0 };
 
         return NextResponse.json({
             success: true,
             canteenId,
-            correctVotes: summary.correctVotes,
-            incorrectVotes: summary.incorrectVotes
+            openVotes: summary.openVotes,
+            closedVotes: summary.closedVotes
         });
     } catch (error) {
         console.error('Database error:', error);
