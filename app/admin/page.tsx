@@ -14,6 +14,7 @@ import {
     Lock,
     Check,
     X,
+    AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -27,6 +28,17 @@ interface CanteenPin {
     id: string;
     name: string;
     pin: string;
+}
+
+interface RateLimitedIP {
+    ip: string;
+    page: string;
+    canteenId?: string;
+    canteenName?: string;
+    attempts: number;
+    lastAttempt: string;
+    lockoutUntil: string | null;
+    isCurrentlyLocked: boolean;
 }
 
 const LOCKOUT_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
@@ -62,6 +74,9 @@ export default function AdminPage() {
     const [confirmAdminPin, setConfirmAdminPin] = useState('');
     const [adminPinError, setAdminPinError] = useState('');
     const [adminPinSuccess, setAdminPinSuccess] = useState(false);
+
+    // Rate Limited IPs State
+    const [rateLimitedIPs, setRateLimitedIPs] = useState<RateLimitedIP[]>([]);
 
     // Load lockout state from localStorage on mount
     useEffect(() => {
@@ -263,11 +278,31 @@ export default function AdminPage() {
         }
     }, [adminPin]);
 
+    // Fetch rate-limited IPs
+    const fetchRateLimitedIPs = useCallback(async () => {
+        try {
+            const response = await fetch('/api/admin/rate-limits', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ adminPin }),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setRateLimitedIPs(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch rate-limited IPs:', error);
+        }
+    }, [adminPin]);
+
     useEffect(() => {
         if (isAuthenticated && adminPin) {
             fetchCanteens();
+            fetchRateLimitedIPs();
         }
-    }, [isAuthenticated, adminPin, fetchCanteens]);
+    }, [isAuthenticated, adminPin, fetchCanteens, fetchRateLimitedIPs]);
 
     // Update canteen PIN
     const updateCanteenPin = async () => {
@@ -666,6 +701,90 @@ export default function AdminPage() {
                                     Cancel
                                 </button>
                             </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Rate Limited IPs Section */}
+                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <AlertTriangle className="text-orange-400" />
+                            Rate Limited IP Addresses
+                        </h3>
+                        <button
+                            onClick={fetchRateLimitedIPs}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-all text-sm"
+                        >
+                            <RefreshCw size={14} />
+                            Refresh
+                        </button>
+                    </div>
+
+                    {rateLimitedIPs.length === 0 ? (
+                        <div className="text-center py-8">
+                            <AlertTriangle className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                            <p className="text-slate-400">No rate-limited IPs found</p>
+                            <p className="text-slate-500 text-sm mt-1">IPs will appear here when they exceed login attempt limits</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-slate-700">
+                                        <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">IP Address</th>
+                                        <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Page</th>
+                                        <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Attempts</th>
+                                        <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Last Attempt</th>
+                                        <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Status</th>
+                                        <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Lockout Expires</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rateLimitedIPs.map((entry, index) => (
+                                        <tr
+                                            key={`${entry.ip}-${entry.page}-${index}`}
+                                            className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors"
+                                        >
+                                            <td className="py-3 px-4">
+                                                <span className="text-white font-mono text-sm">{entry.ip}</span>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className="text-slate-300 text-sm">{entry.page}</span>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className="text-slate-300 text-sm">{entry.attempts}</span>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className="text-slate-400 text-sm">
+                                                    {new Date(entry.lastAttempt).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                {entry.isCurrentlyLocked ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 text-red-400 rounded-lg text-xs font-medium">
+                                                        <Lock size={12} />
+                                                        Locked
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs font-medium">
+                                                        <Check size={12} />
+                                                        Expired
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className="text-slate-400 text-sm">
+                                                    {entry.lockoutUntil
+                                                        ? new Date(entry.lockoutUntil).toLocaleString()
+                                                        : '-'
+                                                    }
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>

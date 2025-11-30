@@ -155,7 +155,7 @@ export interface RateLimitEntry {
     lockoutUntil?: Date | null;
 }
 
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 15;
 const LOCKOUT_DURATION = 3 * 60 * 60 * 1000; // 3 hours
 const ATTEMPT_RESET_DURATION = 60 * 60 * 1000; // 1 hour
 
