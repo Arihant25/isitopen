@@ -152,6 +152,8 @@ export default function AdminPage() {
                 body: JSON.stringify({ pin: pinInput }),
             });
 
+            const slowDown = response.headers.get('x-slow-down') === 'true';
+
             if (response.ok) {
                 setIsAuthenticated(true);
                 setAdminPin(pinInput); // Store the admin PIN for future API calls
@@ -161,6 +163,9 @@ export default function AdminPage() {
                 localStorage.removeItem('adminFailedAttempts');
                 localStorage.removeItem('adminLockoutUntil');
                 localStorage.removeItem('adminLastFailedAttempt');
+                if (slowDown) {
+                    setError('Too many attempts. Please slow down.');
+                }
             } else {
                 // Try to parse error from server
                 let serverError = '';
@@ -177,6 +182,10 @@ export default function AdminPage() {
                     localStorage.setItem('adminLockoutUntil', lockoutTime.toString());
                     setPinInput('');
                     return;
+                }
+
+                if (slowDown) {
+                    setError('Too many attempts. Please slow down.');
                 }
 
                 // Check if last failed attempt was more than ATTEMPT_RESET_DURATION ago, reset counter if so
