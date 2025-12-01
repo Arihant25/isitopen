@@ -47,6 +47,8 @@ interface VotesData {
   [canteenId: string]: {
     openVotes: number;
     closedVotes: number;
+    lastOpenVote?: string;
+    lastClosedVote?: string;
   };
 }
 
@@ -106,6 +108,8 @@ const translations = {
     thankYou: 'Thanks for your feedback!',
     communityFeedback: 'Community Feedback',
     mightBeIncorrect: 'Might be incorrect',
+    lastVotedClosed: 'Last voted closed',
+    lastVotedOpen: 'Last voted open',
   },
   hi: {
     appTitle: 'क्या खुला है?',
@@ -158,6 +162,8 @@ const translations = {
     thankYou: 'आपकी प्रतिक्रिया के लिए धन्यवाद!',
     communityFeedback: 'समुदाय प्रतिक्रिया',
     mightBeIncorrect: 'गलत हो सकता है',
+    lastVotedClosed: 'आखिरी बार बंद वोट किया',
+    lastVotedOpen: 'आखिरी बार खुला वोट किया',
   },
   te: {
     appTitle: 'తెరిచి ఉందా?',
@@ -210,6 +216,8 @@ const translations = {
     thankYou: 'మీ అభిప్రాయానికి ధన్యవాదాలు!',
     communityFeedback: 'సమాజ అభిప్రాయం',
     mightBeIncorrect: 'తప్పు కావచ్చు',
+    lastVotedClosed: 'చివరిగా మూసి ఉందని ఓటు వేసిన సమయం',
+    lastVotedOpen: 'చివరిగా తెరిచి ఉందని ఓటు వేసిన సమయం',
   },
 };
 
@@ -577,6 +585,8 @@ export default function Home() {
           [canteenId]: {
             openVotes: data.openVotes,
             closedVotes: data.closedVotes,
+            lastOpenVote: data.lastOpenVote,
+            lastClosedVote: data.lastClosedVote,
           }
         }));
       }
@@ -895,6 +905,8 @@ export default function Home() {
                 const canteenVotes = votes[canteen.id];
                 const openVotes = canteenVotes?.openVotes || 0;
                 const closedVotes = canteenVotes?.closedVotes || 0;
+                const lastOpenVote = canteenVotes?.lastOpenVote;
+                const lastClosedVote = canteenVotes?.lastClosedVote;
                 const totalVotes = openVotes + closedVotes;
                 // Show warning if there are votes and people disagree with the status
                 const showVoteWarning = totalVotes >= 2 && (
@@ -902,9 +914,29 @@ export default function Home() {
                 );
                 const isInactive = inactiveCanteenIds.has(canteen.id);
 
+                // Format last vote time for tooltip (shows most recent vote)
+                const getLastVoteTooltip = () => {
+                  const openTime = lastOpenVote ? new Date(lastOpenVote).getTime() : 0;
+                  const closedTime = lastClosedVote ? new Date(lastClosedVote).getTime() : 0;
+
+                  if (openTime === 0 && closedTime === 0) return undefined;
+
+                  const isOpenMoreRecent = openTime > closedTime;
+                  const lastVoteTime = isOpenMoreRecent ? lastOpenVote : lastClosedVote;
+                  const label = isOpenMoreRecent ? t.lastVotedOpen : t.lastVotedClosed;
+
+                  const diffMs = Date.now() - new Date(lastVoteTime!).getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  if (diffMins < 1) return `${label} <1 min ${t.ago}`;
+                  if (diffMins < 60) return `${label} ${diffMins} min${diffMins !== 1 ? 's' : ''} ${t.ago}`;
+                  const diffHours = Math.floor(diffMins / 60);
+                  return `${label} ${diffHours} hour${diffHours !== 1 ? 's' : ''} ${t.ago}`;
+                };
+
                 return (
                   <div
                     key={canteen.id}
+                    title={getLastVoteTooltip()}
                     className={`flex flex-col p-4 rounded-xl border transition-all ${isOpen
                       ? showVoteWarning
                         ? 'bg-slate-800 border-yellow-500/50 shadow-lg shadow-yellow-500/10'
