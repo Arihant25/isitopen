@@ -28,7 +28,8 @@ import {
   HandCoins,
   AlertTriangle,
   Cannabis,
-  Landmark
+  Landmark,
+  Heart
 } from 'lucide-react';
 import { Analytics } from '@/lib/analytics';
 
@@ -497,6 +498,7 @@ const CanteenIcon = ({ type, size = 24, className }: { type: string; size?: numb
   if (type === 'waffle') return <Cookie size={size} className={className} />;
   if (type === 'cannabis') return <Cannabis size={size} className={className} />;
   if (type === 'landmark') return <Landmark size={size} className={className} />;
+  if (type === 'heart') return <Heart size={size} className={className} />;
   return <Store size={size} className={className} />;
 };
 
