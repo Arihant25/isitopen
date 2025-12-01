@@ -67,14 +67,32 @@ export async function GET(request: NextRequest) {
             }
         ]).toArray();
 
+        // Get the 3 most recent votes for each canteen
+        const allCanteenIds = voteSummary.map(item => item._id);
+        const recentVotesMap: Record<string, Array<{ voteType: string; timestamp: string }>> = {};
+
+        for (const canteenId of allCanteenIds) {
+            const recentVotes = await collection
+                .find({ canteenId, periodStart: { $gte: periodStart } })
+                .sort({ timestamp: -1 })
+                .limit(3)
+                .toArray();
+
+            recentVotesMap[canteenId] = recentVotes.map(v => ({
+                voteType: v.voteType,
+                timestamp: new Date(v.timestamp).toISOString()
+            }));
+        }
+
         // Transform to a map for easier frontend consumption
-        const votesMap: Record<string, { openVotes: number; closedVotes: number; lastOpenVote?: string; lastClosedVote?: string }> = {};
+        const votesMap: Record<string, { openVotes: number; closedVotes: number; lastOpenVote?: string; lastClosedVote?: string; recentVotes?: Array<{ voteType: string; timestamp: string }> }> = {};
         voteSummary.forEach(item => {
             votesMap[item._id] = {
                 openVotes: item.openVotes,
                 closedVotes: item.closedVotes,
                 lastOpenVote: item.lastOpenVote ? new Date(item.lastOpenVote).toISOString() : undefined,
-                lastClosedVote: item.lastClosedVote ? new Date(item.lastClosedVote).toISOString() : undefined
+                lastClosedVote: item.lastClosedVote ? new Date(item.lastClosedVote).toISOString() : undefined,
+                recentVotes: recentVotesMap[item._id] || []
             };
         });
 
@@ -155,6 +173,13 @@ export async function POST(request: NextRequest) {
             }
         ]).toArray();
 
+        // Get the 3 most recent votes for this canteen
+        const recentVotes = await votesCollection
+            .find({ canteenId, periodStart: { $gte: periodStart } })
+            .sort({ timestamp: -1 })
+            .limit(3)
+            .toArray();
+
         const summary = voteSummary[0] || { openVotes: 0, closedVotes: 0, lastOpenVote: null, lastClosedVote: null };
 
         return NextResponse.json({
@@ -163,7 +188,11 @@ export async function POST(request: NextRequest) {
             openVotes: summary.openVotes,
             closedVotes: summary.closedVotes,
             lastOpenVote: summary.lastOpenVote ? new Date(summary.lastOpenVote).toISOString() : undefined,
-            lastClosedVote: summary.lastClosedVote ? new Date(summary.lastClosedVote).toISOString() : undefined
+            lastClosedVote: summary.lastClosedVote ? new Date(summary.lastClosedVote).toISOString() : undefined,
+            recentVotes: recentVotes.map(v => ({
+                voteType: v.voteType,
+                timestamp: new Date(v.timestamp).toISOString()
+            }))
         });
     } catch (error) {
         console.error('Database error:', error);

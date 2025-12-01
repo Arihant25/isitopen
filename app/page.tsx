@@ -49,6 +49,7 @@ interface VotesData {
     closedVotes: number;
     lastOpenVote?: string;
     lastClosedVote?: string;
+    recentVotes?: Array<{ voteType: string; timestamp: string }>;
   };
 }
 
@@ -110,6 +111,9 @@ const translations = {
     mightBeIncorrect: 'Might be incorrect',
     lastVotedClosed: 'Last voted closed',
     lastVotedOpen: 'Last voted open',
+    recentVotes: 'Recent votes',
+    votedOpen: 'Voted open',
+    votedClosed: 'Voted closed',
   },
   hi: {
     appTitle: 'क्या खुला है?',
@@ -164,6 +168,9 @@ const translations = {
     mightBeIncorrect: 'गलत हो सकता है',
     lastVotedClosed: 'आखिरी बार बंद वोट किया',
     lastVotedOpen: 'आखिरी बार खुला वोट किया',
+    recentVotes: 'हाल के वोट',
+    votedOpen: 'खुला वोट किया',
+    votedClosed: 'बंद वोट किया',
   },
   te: {
     appTitle: 'తెరిచి ఉందా?',
@@ -218,6 +225,9 @@ const translations = {
     mightBeIncorrect: 'తప్పు కావచ్చు',
     lastVotedClosed: 'చివరిగా మూసి ఉందని ఓటు వేసిన సమయం',
     lastVotedOpen: 'చివరిగా తెరిచి ఉందని ఓటు వేసిన సమయం',
+    recentVotes: 'ఇటీవలి ఓట్లు',
+    votedOpen: 'తెరిచి ఉందని ఓటు వేసింది',
+    votedClosed: 'మూసి ఉందని ఓటు వేసింది',
   },
 };
 
@@ -248,7 +258,7 @@ const VotingDialog = ({
   onVote
 }: {
   canteen: Canteen;
-  votes: { openVotes: number; closedVotes: number } | undefined;
+  votes: { openVotes: number; closedVotes: number; recentVotes?: Array<{ voteType: string; timestamp: string }> } | undefined;
   onClose: () => void;
   onVote: (canteenId: string, voteType: 'open' | 'closed') => void;
 }) => {
@@ -260,6 +270,23 @@ const VotingDialog = ({
   const closedVotes = votes?.closedVotes || 0;
   const totalVotes = openVotes + closedVotes;
   const openPercent = totalVotes > 0 ? (openVotes / totalVotes) * 100 : 50;
+  const recentVotes = votes?.recentVotes || [];
+
+  // Format relative time (X minutes ago)
+  const formatRelativeTime = (timestamp: string) => {
+    const now = new Date();
+    const voteTime = new Date(timestamp);
+    const diffMs = now.getTime() - voteTime.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return '<1 min ago';
+    if (diffMins === 1) return '1 min ago';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours === 1) return '1 hour ago';
+    return `${diffHours} hours ago`;
+  };
 
   const handleVote = async (voteType: 'open' | 'closed') => {
     setSubmitting(true);
@@ -379,6 +406,23 @@ const VotingDialog = ({
                   style={{ width: `${100 - openPercent}%` }}
                 />
               </div>
+
+              {/* Recent votes */}
+              {recentVotes.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-slate-700/50">
+                  <p className="text-slate-500 text-xs font-medium mb-2">{t.recentVotes}</p>
+                  <div className="space-y-1.5">
+                    {recentVotes.map((vote, index) => (
+                      <div key={index} className="flex items-center justify-between text-xs">
+                        <span className={vote.voteType === 'open' ? 'text-green-400' : 'text-red-400'}>
+                          {vote.voteType === 'open' ? t.votedOpen : t.votedClosed}
+                        </span>
+                        <span className="text-slate-500">{formatRelativeTime(vote.timestamp)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -587,6 +631,7 @@ export default function Home() {
             closedVotes: data.closedVotes,
             lastOpenVote: data.lastOpenVote,
             lastClosedVote: data.lastClosedVote,
+            recentVotes: data.recentVotes,
           }
         }));
       }
