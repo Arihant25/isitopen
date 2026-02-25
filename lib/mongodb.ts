@@ -240,12 +240,8 @@ export const INITIAL_CANTEENS: Omit<Canteen, 'lastUpdated'>[] = [
     { id: 'basketball-canteen', name: 'Basketball Canteen', icon: 'noodles', status: 'closed', pin: '5303' },
     { id: 'vc-juice', name: 'VC (Juice)', icon: 'drink', status: 'closed', pin: '9635' },
     { id: 'tantra', name: 'Tantra', icon: 'rice', status: 'closed', pin: '8726' },
-    { id: 'devids', name: "Devid's", icon: 'cake', status: 'closed', pin: '8612' },
+    // { id: 'devids', name: "Devid's", icon: 'cake', status: 'closed', pin: '8612' },
     { id: 'chaat-canteen', name: 'Chaat Canteen', icon: 'snack', status: 'closed', pin: '2924' },
-    { id: 'waffle-stall', name: 'Waffle Stall', icon: 'waffle', status: 'closed', pin: '2091' },
     { id: 'dammams-milk-canteen', name: "Dammam's Milk Canteen", icon: 'drink', status: 'closed', pin: '4455' },
-    { id: 'vindhya-stationery', name: 'Vindhya Stationery Shop', icon: 'store', status: 'closed', pin: '3847' },
-    { id: 'uncles', name: "Uncle's", icon: 'cannabis', status: 'closed', pin: '6789' },
     { id: 'cie-canteen', name: 'CIE Canteen', icon: 'landmark', status: 'closed', pin: '5432' },
-    { id: 'aarogya', name: 'Aarogya', icon: 'heart', status: 'closed', pin: '1234' },
 ];

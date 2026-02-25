@@ -894,10 +894,19 @@ export default function Home() {
     );
   }
 
-  const inactiveCanteenIds = new Set(['devids', 'cie-canteen', 'uncles', 'vindhya-stationery']);
+  // Canteens hidden from the student view (temporarily inactive)
+  const hiddenCanteenIds = new Set([
+    'basketball-canteen',
+    'vindhya-canteen',
+    'tantra',
+    'chaat-canteen',
+    'cie-canteen',
+    'vc-juice',
+    'devids',
+  ]);
   // VIEW: STUDENT LIST
   if (view === 'student') {
-    const sortedCanteens = [...canteens].sort((a, b) => {
+    const sortedCanteens = [...canteens].filter(c => !hiddenCanteenIds.has(c.id)).sort((a, b) => {
       const aOpen = a.status === 'open' ? 1 : 0;
       const bOpen = b.status === 'open' ? 1 : 0;
       return bOpen - aOpen;
@@ -959,7 +968,7 @@ export default function Home() {
                 const showVoteWarning = totalVotes >= 2 && (
                   (isOpen && closedVotes > openVotes) || (!isOpen && openVotes > closedVotes)
                 );
-                const isInactive = inactiveCanteenIds.has(canteen.id);
+                const isInactive = false; // inactive badge removed
 
                 // Format last vote time for tooltip (shows most recent vote)
                 const getLastVoteTooltip = () => {
@@ -1037,6 +1046,7 @@ export default function Home() {
                         <span>Currently Inactive</span>
                       </div>
                     )}
+                    {/* isInactive is unused but kept for future use */}
 
                     {/* Note display */}
                     {canteen.note && (
