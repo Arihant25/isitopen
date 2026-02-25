@@ -894,7 +894,7 @@ export default function Home() {
     );
   }
 
-  const inactiveCanteenIds = new Set(['devids', 'dammams-milk-canteen', 'cie-canteen', 'uncles', 'vindhya-stationery']);
+  const inactiveCanteenIds = new Set(['devids', 'cie-canteen', 'uncles', 'vindhya-stationery']);
   // VIEW: STUDENT LIST
   if (view === 'student') {
     const sortedCanteens = [...canteens].sort((a, b) => {
